@@ -40,6 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         "Salom! Men matnni ovozga aylantiruvchi botman.\n"
+        "Ovozni yaxshilash uchun matnda nuqta va vergullardan foydalaning.\n"
         "Matn yuboring, men uni audio qilib beraman.",
         reply_markup=reply_markup
     )
@@ -52,10 +53,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "set_female":
         user_settings[user_id] = "female"
-        await query.edit_message_text("Ovoz o'zgartirildi: 👩 Madina.")
+        await query.edit_message_text("Ovoz o'zgartirildi: 👩 Madina. Endi matn yuboring.")
     elif query.data == "set_male":
         user_settings[user_id] = "male"
-        await query.edit_message_text("Ovoz o'zgartirildi: 👨 Sardor.")
+        await query.edit_message_text("Ovoz o'zgartirildi: 👨 Sardor. Endi matn yuboring.")
 
 # 5. Matn yuborilganda ovozga aylantirish funksiyasi
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -64,17 +65,21 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     gender = user_settings.get(user_id, "female")
     voice = VOICES[gender]
     
-    status_msg = await update.message.reply_text("Ovoz yozilmoqda...")
+    status_msg = await update.message.reply_text("Ovoz yozilmoqda, kuting...")
     output_file = f"voice_{user_id}.mp3"
     
     try:
-        communicate = edge_tts.Communicate(text, voice)
+        # rate="-10%" - ovozni 10% sekinlashtiradi (tabiiylik uchun)
+        # pitch="-1Hz" - ovozni biroz yo'g'onlashtiradi (robotlikni kamaytirish uchun)
+        communicate = edge_tts.Communicate(text, voice, rate="-10%", pitch="-1Hz")
         await communicate.save(output_file)
+        
         with open(output_file, 'rb') as audio:
-            await update.message.reply_voice(voice=audio)
+            await update.message.reply_voice(voice=audio, caption="Tayyor!")
+            
         await status_msg.delete()
     except Exception as e:
-        await update.message.reply_text(f"Xatolik: {e}")
+        await update.message.reply_text(f"Xatolik yuz berdi: {e}")
     finally:
         if os.path.exists(output_file):
             os.remove(output_file)
